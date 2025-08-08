@@ -16,7 +16,7 @@ A modern web app that captures your speech live, transcribes it in real-time, tr
 ---
 ## Live Demo
 
-Try the real-time speech translator [here](https://your-live-demo-url.com)!
+Try the real-time speech translator [here](http://127.0.0.1:8000)!
 
 ---
 ## Demo Preview

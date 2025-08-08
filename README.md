@@ -19,7 +19,7 @@ A modern web app that captures your speech live, transcribes it in real-time, tr
 
 Here are some screenshots of the Smart Resume Scanner in action:
 
-![Output 1](https://github.com/praveenreddy82472/Smart-Resume-Scanner-Azure-AI/blob/main/sample_outputs/1.jpg?raw=true)
+![Output 1](https://github.com/praveenreddy82472/Real-Time-Speech-Translator-with-Sentiment-Analysis-AzureAI/blob/main/Sample_outputs/Screenshot%202025-08-08%20133122.jpg)
 
 ---
 ## Live Demo

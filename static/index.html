@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Real-Time Speech Translator</title>
+  <style>
+    /* Base and reset */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 30px 20px;
+      color: var(--text-color);
+      background: var(--bg-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      user-select: none;
+      transition: background-color 0.4s ease, color 0.4s ease;
+    }
+    :root {
+      --bg-color: #f5f7fa;
+      --text-color: #333;
+      --card-bg: #fff;
+      --card-shadow: rgba(0, 0, 0, 0.08);
+      --btn-bg: #3b82f6;
+      --btn-hover-bg: #2563eb;
+      --btn-disabled-bg: #94a3b8;
+      --listening-bg: #22c55e;
+      --border-color: #e2e8f0;
+    }
+    .dark {
+      --bg-color: #121212;
+      --text-color: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --card-shadow: rgba(0, 0, 0, 0.7);
+      --btn-bg: #3b82f6;
+      --btn-hover-bg: #60a5fa;
+      --btn-disabled-bg: #4b5563;
+      --listening-bg: #22c55e;
+      --border-color: #374151;
+    }
+
+    h1 {
+      margin-bottom: 1rem;
+      color: var(--text-color);
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+    #container {
+      display: flex;
+      gap: 30px;
+      width: 100%;
+      max-width: 900px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #left, #right {
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 8px 20px var(--card-shadow);
+      flex: 1 1 400px;
+      min-height: 320px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      transition: box-shadow 0.3s ease, background-color 0.4s ease;
+      position: relative;
+    }
+    #left:hover, #right:hover {
+      box-shadow: 0 12px 30px var(--card-shadow);
+    }
+    h2 {
+      margin: 0 0 15px 0;
+      color: var(--text-color);
+      font-weight: 600;
+      font-size: 1.4rem;
+      border-bottom: 2px solid #3b82f6;
+      padding-bottom: 5px;
+    }
+    #transcript, #translation {
+      flex-grow: 1;
+      font-size: 1.15rem;
+      line-height: 1.5;
+      color: var(--text-color);
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+      min-height: 120px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px 15px;
+      background: var(--bg-color);
+      box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.06);
+      opacity: 0;
+      animation: fadeIn 0.6s forwards;
+      transition: opacity 0.3s ease;
+    }
+    #sentiment {
+      margin-top: 25px;
+      font-weight: 700;
+      font-size: 1.3rem;
+      color: var(--text-color);
+      min-height: 28px;
+      text-align: center;
+      user-select: text;
+      transition: color 0.4s ease;
+    }
+    button {
+      margin-top: 20px;
+      padding: 14px 30px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: var(--btn-bg);
+      color: white;
+      transition: background-color 0.3s ease, transform 0.15s ease;
+      box-shadow: 0 4px 12px rgb(59 130 246 / 0.4);
+      user-select: none;
+    }
+    button:disabled {
+      background: var(--btn-disabled-bg);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+    button:not(:disabled):hover {
+      background-color: var(--btn-hover-bg);
+      transform: scale(1.05);
+      box-shadow: 0 6px 16px rgb(37 99 235 / 0.55);
+    }
+    button:not(:disabled):active {
+      transform: scale(0.95);
+      box-shadow: 0 2px 6px rgb(37 99 235 / 0.7);
+    }
+    /* Listening indicator */
+    #listening-indicator {
+      position: absolute;
+      top: 12px;
+      right: 20px;
+      background: var(--listening-bg);
+      color: white;
+      font-size: 0.9rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      box-shadow: 0 0 10px var(--listening-bg);
+      display: none;
+      user-select: none;
+      animation: pulse 2s infinite;
+      transition: background-color 0.4s ease, box-shadow 0.4s ease;
+    }
+    /* Loading spinner */
+    .spinner {
+      border: 4px solid var(--bg-color);
+      border-top: 4px solid var(--btn-bg);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 10px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      #container {
+        flex-direction: column;
+        max-width: 100%;
+      }
+      #left, #right {
+        flex: none;
+        min-height: 250px;
+        margin-bottom: 25px;
+      }
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 10px var(--listening-bg); }
+      50% { box-shadow: 0 0 20px var(--listening-bg); }
+    }
+
+    /* Dark mode toggle switch */
+    #dark-mode-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.9rem;
+      color: var(--text-color);
+      z-index: 100;
+    }
+    #dark-mode-toggle input[type="checkbox"] {
+      display: none;
+    }
+    #dark-mode-toggle label {
+      display: inline-block;
+      width: 50px;
+      height: 26px;
+      background: #ccc;
+      border-radius: 50px;
+      position: relative;
+      transition: background-color 0.3s ease;
+      margin-left: 10px;
+    }
+    #dark-mode-toggle label::after {
+      content: '';
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      background: white;
+      transition: left 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    #dark-mode-toggle input[type="checkbox"]:checked + label {
+      background: #3b82f6;
+    }
+    #dark-mode-toggle input[type="checkbox"]:checked + label::after {
+      left: 26px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Dark Mode Toggle -->
+<div id="dark-mode-toggle" aria-label="Toggle dark mode" role="switch" tabindex="0">
+  <span>🌞</span>
+  <input type="checkbox" id="toggle-checkbox" aria-checked="false" />
+  <label for="toggle-checkbox" tabindex="0"></label>
+  <span>🌙</span>
+</div>
+
+<h1>Real-Time Speech Translator with Sentiment</h1>
+
+<div id="container">
+  <div id="left" aria-label="Speech transcript section" role="region">
+    <h2>Speak / Transcript</h2>
+    <div id="transcript" aria-live="polite" aria-atomic="true" aria-relevant="text">--</div>
+    <div id="listening-indicator" aria-live="assertive" role="status">🎙️ Listening...</div>
+    <button id="start-btn" aria-pressed="false" aria-label="Start speech recognition">Start Speaking</button>
+    <button id="stop-btn" disabled aria-pressed="true" aria-label="Stop speech recognition">Stop</button>
+  </div>
+  <div id="right" aria-label="Translation section" role="region">
+    <h2>Translation</h2>
+    <div id="translation" aria-live="polite" aria-atomic="true" aria-relevant="text">--</div>
+  </div>
+</div>
+
+<div id="sentiment" aria-live="polite" role="status" aria-atomic="true">Sentiment: N/A</div>
+
+<script>
+  const startBtn = document.getElementById('start-btn');
+  const stopBtn = document.getElementById('stop-btn');
+  const transcriptDiv = document.getElementById('transcript');
+  const translationDiv = document.getElementById('translation');
+  const sentimentDiv = document.getElementById('sentiment');
+  const listeningIndicator = document.getElementById('listening-indicator');
+  const darkModeToggle = document.getElementById('dark-mode-toggle');
+  const toggleCheckbox = document.getElementById('toggle-checkbox');
+
+  let recognition;
+  let ws;
+  let isRecognizing = false;
+
+  // Initialize dark mode based on localStorage or system preference
+  function initDarkMode() {
+    const saved = localStorage.getItem('dark-mode');
+    if (saved === 'enabled' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.body.classList.add('dark');
+      toggleCheckbox.checked = true;
+      toggleCheckbox.setAttribute('aria-checked', 'true');
+    } else {
+      document.body.classList.remove('dark');
+      toggleCheckbox.checked = false;
+      toggleCheckbox.setAttribute('aria-checked', 'false');
+    }
+  }
+
+  function toggleDarkMode() {
+    if (document.body.classList.contains('dark')) {
+      document.body.classList.remove('dark');
+      localStorage.setItem('dark-mode', 'disabled');
+      toggleCheckbox.setAttribute('aria-checked', 'false');
+    } else {
+      document.body.classList.add('dark');
+      localStorage.setItem('dark-mode', 'enabled');
+      toggleCheckbox.setAttribute('aria-checked', 'true');
+    }
+  }
+
+  darkModeToggle.addEventListener('click', toggleDarkMode);
+  toggleCheckbox.addEventListener('change', toggleDarkMode);
+
+  initDarkMode();
+
+  if (!('webkitSpeechRecognition' in window)) {
+    alert('Your browser does not support the Web Speech API. Please use Chrome or Edge.');
+  } else {
+    recognition = new webkitSpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      isRecognizing = true;
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      listeningIndicator.style.display = "inline-block";
+      startBtn.setAttribute("aria-pressed", "true");
+      stopBtn.setAttribute("aria-pressed", "false");
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      listeningIndicator.style.display = "none";
+    };
+
+    recognition.onend = () => {
+      isRecognizing = false;
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      listeningIndicator.style.display = "none";
+      startBtn.setAttribute("aria-pressed", "false");
+      stopBtn.setAttribute("aria-pressed", "true");
+    };
+
+    recognition.onresult = (event) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          transcript += event.results[i][0].transcript;
+        }
+      }
+      if (transcript) {
+        transcriptDiv.style.opacity = 0;
+        setTimeout(() => {
+          transcriptDiv.textContent = transcript;
+          transcriptDiv.style.opacity = 1;
+        }, 200);
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          console.log("Sending transcript to WS:", transcript);
+          ws.send(transcript);
+          showSpinner(translationDiv);
+          showSpinner(sentimentDiv);
+        }
+      }
+    };
+  }
+
+  function showSpinner(container) {
+    container.innerHTML = '<span class="spinner" aria-label="Loading"></span>';
+  }
+
+  startBtn.onclick = () => {
+    ws = new WebSocket(`ws://${window.location.host}/ws`);
+
+    ws.onopen = () => {
+      console.log("WebSocket connection opened");
+      recognition.start();
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("Received WS data:", data);
+
+      translationDiv.style.opacity = 0;
+      sentimentDiv.style.opacity = 0;
+
+      setTimeout(() => {
+        translationDiv.textContent = data.translation || "Translation not available";
+        translationDiv.style.opacity = 1;
+
+        if (data.sentiment && typeof data.sentiment === "object") {
+          const s = data.sentiment;
+          sentimentDiv.textContent = `Sentiment: ${capitalize(s.sentiment)} (Pos: ${s.positive.toFixed(2)}, Neu: ${s.neutral.toFixed(2)}, Neg: ${s.negative.toFixed(2)})`;
+        } else {
+          sentimentDiv.textContent = "Sentiment: N/A";
+        }
+        sentimentDiv.style.opacity = 1;
+      }, 300);
+    };
+
+    ws.onerror = (event) => {
+      console.error('WebSocket error:', event);
+      alert("WebSocket error occurred. Check console for details.");
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket connection closed");
+      recognition.stop();
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      listeningIndicator.style.display = "none";
+    };
+  };
+
+  stopBtn.onclick = () => {
+    if (recognition && isRecognizing) {
+      recognition.stop();
+    }
+    if (ws) {
+      ws.close();
+    }
+  };
+
+  function capitalize(text) {
+    if (!text) return "";
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+</script>
+
+</body>
+</html>

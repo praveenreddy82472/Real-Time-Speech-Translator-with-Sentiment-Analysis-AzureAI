@@ -1,0 +1,6 @@
+azure-cognitiveservices-speech
+python-dotenv
+azure-ai-textanalytics
+fastapi
+uvicorn
+requests
